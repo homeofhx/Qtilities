@@ -21,11 +21,15 @@ SOURCES += \
     main.cpp \
     app.cpp \
     awake/awake.cpp \
+    countdown/countdowntimer.cpp \
+    countdown/countdownsetupdialog.cpp \
     RTC/clockwindow.cpp
 
 HEADERS += \
     app.h \
     awake/awake.h \
+    countdown/countdowntimer.h \
+    countdown/countdownsetupdialog.h \
     RTC/clockwindow.h \
     RTC/macos_window.h
 

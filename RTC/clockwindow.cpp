@@ -1,4 +1,5 @@
 #include "clockwindow.h"
+#include "../countdown/countdowntimer.h"
 #include <QDateTime>
 #include <QScreen>
 #include <QGuiApplication>
@@ -39,9 +40,13 @@ ClockWindow::ClockWindow(QWidget *parent) : QMainWindow(parent) {
 
     localLabel = setupLabel("#CCFF9800");
     utcLabel = setupLabel("#CC4CAF50");
+    countdownTimer = new CountdownTimer(this);
 
     layout->addWidget(localLabel);
     layout->addWidget(utcLabel);
+    layout->addWidget(countdownTimer);
+    countdownTimer->hide();
+    connect(countdownTimer, &CountdownTimer::displayVisibilityChanged, this, &ClockWindow::updateWindowVisibility);
 
     setCentralWidget(container);
 
@@ -49,13 +54,8 @@ ClockWindow::ClockWindow(QWidget *parent) : QMainWindow(parent) {
     connect(timer, &QTimer::timeout, this, &ClockWindow::updateTime);
     timer->start(1000);
     updateTime();
-    this->adjustSize();
-
-    QScreen *screen = QGuiApplication::primaryScreen();
-    if (screen) {
-        int x = (screen->geometry().width() - this->width()) / 2;
-        move(x, 75);   // Gap between top of the screen and time text, default to 75. Adjust when needed
-    }
+    adjustSize();
+    moveToTopCenter();
 }
 
 void ClockWindow::updateTime() {
@@ -63,8 +63,7 @@ void ClockWindow::updateTime() {
     QDateTime now = QDateTime::currentDateTime();
     QString localTime = now.toString("hh:mm:ss");
     QString localDate = now.toString("d MMM yyyy").toUpper();
-    localLabel->setText(QString("NOW %1<br>"
-                                "<span style='font-size: %2px; font-weight: normal;'>%3</span>")
+    localLabel->setText(QString("NOW %1<br>" "<span style='font-size: %2px; font-weight: normal;'>%3</span>")
                             .arg(localTime)
                             .arg(qRound(65 * 0.5))
                             .arg(localDate));
@@ -73,8 +72,7 @@ void ClockWindow::updateTime() {
     QDateTime utc = QDateTime::currentDateTimeUtc();
     QString utcTime = utc.toString("hh:mm:ss");
     QString utcDate = utc.toString("d MMM yyyy").toUpper();
-    utcLabel->setText(QString("UTC %1<br>"
-                              "<span style='font-size: %2px; font-weight: normal;'>%3</span>")
+    utcLabel->setText(QString("UTC %1<br>" "<span style='font-size: %2px; font-weight: normal;'>%3</span>")
                           .arg(utcTime)
                           .arg(qRound(65 * 0.5))
                           .arg(utcDate));
@@ -82,13 +80,36 @@ void ClockWindow::updateTime() {
 
 void ClockWindow::toggleUTC() {
     showUTC = !showUTC;
-    utcLabel->setVisible(showUTC);
-    this->adjustSize();
+    utcLabel->setVisible(clockVisible && showUTC);
+    adjustSize();
+    moveToTopCenter();
     emit utcVisibilityChanged(showUTC);
 }
 
 void ClockWindow::showClock() {
-    this->show();
+    clockVisible = true;
+    updateWindowVisibility();
+}
+
+void ClockWindow::hideClock() {
+    clockVisible = false;
+    updateWindowVisibility();
+}
+
+void ClockWindow::updateWindowVisibility() {
+    localLabel->setVisible(clockVisible);
+    utcLabel->setVisible(clockVisible && showUTC);
+    countdownTimer->setVisible(countdownTimer->isDisplayed());
+
+    adjustSize();
+    moveToTopCenter();
+
+    if (!clockVisible && !countdownTimer->isDisplayed()) {
+        hide();
+        return;
+    }
+
+    show();
 
     // Dealing with Mac OS's floating view issue
 #ifdef Q_OS_MAC
@@ -96,6 +117,11 @@ void ClockWindow::showClock() {
 #endif
 }
 
-void ClockWindow::hideClock() {
-    this->hide();
+void ClockWindow::moveToTopCenter() {
+    QScreen *screen = QGuiApplication::primaryScreen();
+    if (!screen) return;
+
+    const QRect geometry = screen->availableGeometry();
+    const int x = geometry.x() + (geometry.width() - width()) / 2;
+    move(x, geometry.y() + 75);
 }

@@ -8,6 +8,8 @@ As for now, it contains:
 
 - **RTC:** Displays local/UTC time near the top of the screen.
 
+- **Countdown Timer:** Displays a labeled countdown timer.
+
 ## Technical Details
 
 **Qt Version:** 5.15

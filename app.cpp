@@ -1,4 +1,5 @@
 #include "app.h"
+#include "countdown/countdownsetupdialog.h"
 #include <QIcon>
 #include <QCursor>
 #include <QCoreApplication>
@@ -6,7 +7,9 @@
 ToolkitApp::ToolkitApp(QObject *parent) : QObject(parent) {
     awakeController = new AwakeController(this);
     clockWindow = new ClockWindow();
+    countdownTimer = clockWindow->countdown();
     connect(clockWindow, &ClockWindow::utcVisibilityChanged, this, &ToolkitApp::onClockUTCVisibilityChanged);
+    connect(countdownTimer, &CountdownTimer::stateChanged, this, &ToolkitApp::onCountdownStateChanged);
     setupTrayIcon();
 }
 
@@ -41,6 +44,33 @@ void ToolkitApp::setupTrayIcon() {
 
     trayMenu->addSeparator();
 
+    // Countdown timer
+
+    QAction *countdownHeader = new QAction("Timer", trayMenu);
+    countdownHeader->setEnabled(false);
+    trayMenu->addAction(countdownHeader);
+
+    countdownSetupAction = new QAction("Set up", trayMenu);
+    connect(countdownSetupAction, &QAction::triggered, this, &ToolkitApp::onCountdownSetup);
+    trayMenu->addAction(countdownSetupAction);
+
+    countdownPauseAction = new QAction("Pause", trayMenu);
+    connect(countdownPauseAction, &QAction::triggered, this, &ToolkitApp::onCountdownPauseOrContinue);
+    countdownPauseAction->setVisible(false);
+    trayMenu->addAction(countdownPauseAction);
+
+    countdownCancelAction = new QAction("Cancel", trayMenu);
+    connect(countdownCancelAction, &QAction::triggered, this, &ToolkitApp::onCountdownCancel);
+    countdownCancelAction->setVisible(false);
+    trayMenu->addAction(countdownCancelAction);
+
+    countdownDoneAction = new QAction("Done", trayMenu);
+    connect(countdownDoneAction, &QAction::triggered, this, &ToolkitApp::onCountdownDone);
+    countdownDoneAction->setVisible(false);
+    trayMenu->addAction(countdownDoneAction);
+
+    trayMenu->addSeparator();
+
     // Quit
     QAction *quitAction = new QAction("Quit!", trayMenu);
     connect(quitAction, &QAction::triggered, qApp, &QCoreApplication::quit);
@@ -65,7 +95,7 @@ void ToolkitApp::onAwakeToggled() {
 // RTC
 
 void ToolkitApp::onShowTimeToggled() {
-    if (clockWindow->isVisible()) {
+    if (clockWindow->isClockVisible()) {
         clockWindow->hideClock();
         showTimeAction->setText("Show Time");
     } else {
@@ -80,6 +110,40 @@ void ToolkitApp::onUTCToggled() {
 
 void ToolkitApp::onClockUTCVisibilityChanged(bool visible) {
     toggleUTCAction->setText(visible ? "Hide UTC" : "Show UTC");
+}
+
+// Countdown
+
+void ToolkitApp::onCountdownSetup() {
+    CountdownSetupDialog dialog;
+    if (dialog.exec() == QDialog::Accepted) {
+        countdownTimer->startCountdown(dialog.durationSeconds(), dialog.countdownLabel());
+    }
+}
+
+void ToolkitApp::onCountdownPauseOrContinue() {
+    if (countdownTimer->state() == CountdownTimer::State::Running) {
+        countdownTimer->pauseCountdown();
+    } else if (countdownTimer->state() == CountdownTimer::State::Paused) {
+        countdownTimer->continueCountdown();
+    }
+}
+
+void ToolkitApp::onCountdownCancel() {
+    countdownTimer->cancelCountdown();
+}
+
+void ToolkitApp::onCountdownDone() {
+    countdownTimer->dismissFinishedCountdown();
+}
+
+void ToolkitApp::onCountdownStateChanged(CountdownTimer::State state) {
+    const bool isActive = state == CountdownTimer::State::Running || state == CountdownTimer::State::Paused;
+    countdownSetupAction->setVisible(state == CountdownTimer::State::Idle);
+    countdownPauseAction->setVisible(isActive);
+    countdownPauseAction->setText(state == CountdownTimer::State::Paused ? "Continue" : "Pause");
+    countdownCancelAction->setVisible(isActive);
+    countdownDoneAction->setVisible(state == CountdownTimer::State::Finished);
 }
 
 void ToolkitApp::onTrayIconActivated(QSystemTrayIcon::ActivationReason reason) {
