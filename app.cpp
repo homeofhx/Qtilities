@@ -1,14 +1,21 @@
 #include "app.h"
+#include "awake/awake.h"
+#include "RTC/chime.h"
 #include "countdown/countdownsetupdialog.h"
-#include <QIcon>
-#include <QCursor>
+#include "floating/floatingdisplaymanager.h"
+#include <QAction>
 #include <QCoreApplication>
+#include <QCursor>
+#include <QIcon>
+#include <QMenu>
 
 ToolkitApp::ToolkitApp(QObject *parent) : QObject(parent) {
     awakeController = new AwakeController(this);
-    clockWindow = new ClockWindow();
-    countdownTimer = clockWindow->countdown();
-    connect(clockWindow, &ClockWindow::utcVisibilityChanged, this, &ToolkitApp::onClockUTCVisibilityChanged);
+    displayManager = new FloatingDisplayManager(this);
+    chime = new Chime(this);
+    countdownTimer = displayManager->countdown();
+    connect(displayManager, &FloatingDisplayManager::utcVisibilityChanged,
+            this, &ToolkitApp::onClockUTCVisibilityChanged);
     connect(countdownTimer, &CountdownTimer::stateChanged, this, &ToolkitApp::onCountdownStateChanged);
     setupTrayIcon();
 }
@@ -18,63 +25,56 @@ void ToolkitApp::setupTrayIcon() {
 
     // Awake
 
-    QAction *awakeHeader = new QAction("Awake", trayMenu);
+    QAction *awakeHeader = trayMenu->addAction("Awake");
     awakeHeader->setEnabled(false);
-    trayMenu->addAction(awakeHeader);
 
-    awakeToggleAction = new QAction("Awake!", trayMenu);
+    awakeToggleAction = trayMenu->addAction("Awake!");
     connect(awakeToggleAction, &QAction::triggered, this, &ToolkitApp::onAwakeToggled);
-    trayMenu->addAction(awakeToggleAction);
 
     trayMenu->addSeparator();
 
     // RTC
 
-    QAction *rtcHeader = new QAction("RTC", trayMenu);
+    QAction *rtcHeader = trayMenu->addAction("RTC");
     rtcHeader->setEnabled(false);
-    trayMenu->addAction(rtcHeader);
 
-    showTimeAction = new QAction("Show Time", trayMenu);
+    showTimeAction = trayMenu->addAction("Show Time");
     connect(showTimeAction, &QAction::triggered, this, &ToolkitApp::onShowTimeToggled);
-    trayMenu->addAction(showTimeAction);
 
-    toggleUTCAction = new QAction(clockWindow->isUTCVisible() ? "Hide UTC" : "Show UTC", trayMenu);
+    toggleUTCAction = trayMenu->addAction(displayManager->isUTCVisible() ? "Hide UTC" : "Show UTC");
     connect(toggleUTCAction, &QAction::triggered, this, &ToolkitApp::onUTCToggled);
-    trayMenu->addAction(toggleUTCAction);
+
+    chimeToggleAction = trayMenu->addAction("Chime On");
+    connect(chimeToggleAction, &QAction::triggered, this, &ToolkitApp::onChimeToggled);
 
     trayMenu->addSeparator();
 
     // Countdown timer
 
-    QAction *countdownHeader = new QAction("Timer", trayMenu);
+    QAction *countdownHeader = trayMenu->addAction("Timer");
     countdownHeader->setEnabled(false);
-    trayMenu->addAction(countdownHeader);
 
-    countdownSetupAction = new QAction("Set up", trayMenu);
+    countdownSetupAction = trayMenu->addAction("Set up");
     connect(countdownSetupAction, &QAction::triggered, this, &ToolkitApp::onCountdownSetup);
-    trayMenu->addAction(countdownSetupAction);
 
-    countdownPauseAction = new QAction("Pause", trayMenu);
+    countdownPauseAction = trayMenu->addAction("Pause");
     connect(countdownPauseAction, &QAction::triggered, this, &ToolkitApp::onCountdownPauseOrContinue);
     countdownPauseAction->setVisible(false);
-    trayMenu->addAction(countdownPauseAction);
 
-    countdownCancelAction = new QAction("Cancel", trayMenu);
+    countdownCancelAction = trayMenu->addAction("Cancel");
     connect(countdownCancelAction, &QAction::triggered, this, &ToolkitApp::onCountdownCancel);
     countdownCancelAction->setVisible(false);
-    trayMenu->addAction(countdownCancelAction);
 
-    countdownDoneAction = new QAction("Done", trayMenu);
+    countdownDoneAction = trayMenu->addAction("Done");
     connect(countdownDoneAction, &QAction::triggered, this, &ToolkitApp::onCountdownDone);
     countdownDoneAction->setVisible(false);
-    trayMenu->addAction(countdownDoneAction);
 
     trayMenu->addSeparator();
 
     // Quit
-    QAction *quitAction = new QAction("Quit!", trayMenu);
+
+    QAction *quitAction = trayMenu->addAction("Quit!");
     connect(quitAction, &QAction::triggered, qApp, &QCoreApplication::quit);
-    trayMenu->addAction(quitAction);
 
     // Taskbar icon config
     trayIcon = new QSystemTrayIcon(this);
@@ -95,17 +95,23 @@ void ToolkitApp::onAwakeToggled() {
 // RTC
 
 void ToolkitApp::onShowTimeToggled() {
-    if (clockWindow->isClockVisible()) {
-        clockWindow->hideClock();
+    if (displayManager->isClockVisible()) {
+        displayManager->hideClock();
         showTimeAction->setText("Show Time");
     } else {
-        clockWindow->showClock();
+        displayManager->showClock();
         showTimeAction->setText("Hide Time");
     }
 }
 
 void ToolkitApp::onUTCToggled() {
-    clockWindow->toggleUTC();
+    displayManager->toggleUTC();
+}
+
+void ToolkitApp::onChimeToggled() {
+    const bool newState = !chime->isEnabled();
+    chime->setEnabled(newState);
+    chimeToggleAction->setText(newState ? "Chime Off" : "Chime On");
 }
 
 void ToolkitApp::onClockUTCVisibilityChanged(bool visible) {
@@ -151,5 +157,7 @@ void ToolkitApp::onTrayIconActivated(QSystemTrayIcon::ActivationReason reason) {
 }
 
 ToolkitApp::~ToolkitApp() {
-    delete clockWindow;
+    trayIcon->hide();
+    trayIcon->setContextMenu(nullptr);
+    delete trayMenu;
 }

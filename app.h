@@ -1,13 +1,14 @@
 #ifndef APP_H
 #define APP_H
-
 #include <QObject>
 #include <QSystemTrayIcon>
-#include <QMenu>
-#include <QAction>
-#include "awake/awake.h"
-#include "RTC/clockwindow.h"
 #include "countdown/countdowntimer.h"
+
+class QAction;
+class AwakeController;
+class Chime;
+class FloatingDisplayManager;
+class QMenu;
 
 class ToolkitApp : public QObject {
     Q_OBJECT
@@ -20,6 +21,7 @@ private slots:
     void onAwakeToggled();
     void onShowTimeToggled();
     void onUTCToggled();
+    void onChimeToggled();
     void onClockUTCVisibilityChanged(bool visible);
     void onCountdownSetup();
     void onCountdownPauseOrContinue();
@@ -31,15 +33,17 @@ private slots:
 private:
     void setupTrayIcon();
 
-    AwakeController *awakeController;
-    ClockWindow *clockWindow;
-    CountdownTimer *countdownTimer;
+    AwakeController *awakeController = nullptr;
+    FloatingDisplayManager *displayManager = nullptr;
+    Chime *chime = nullptr;
+    CountdownTimer *countdownTimer = nullptr;
 
     QSystemTrayIcon *trayIcon = nullptr;
     QMenu *trayMenu = nullptr;
     QAction *awakeToggleAction = nullptr;
     QAction *showTimeAction = nullptr;
     QAction *toggleUTCAction = nullptr;
+    QAction *chimeToggleAction = nullptr;
     QAction *countdownSetupAction = nullptr;
     QAction *countdownPauseAction = nullptr;
     QAction *countdownCancelAction = nullptr;

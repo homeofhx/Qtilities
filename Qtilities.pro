@@ -1,4 +1,4 @@
-QT += widgets svg
+QT += widgets svg multimedia
 unix:!macx: QT += dbus
 CONFIG += c++17
 TARGET = Qtilities
@@ -22,20 +22,28 @@ SOURCES += \
     app.cpp \
     awake/awake.cpp \
     countdown/countdowntimer.cpp \
+    countdown/countdowndisplay.cpp \
     countdown/countdownsetupdialog.cpp \
-    RTC/clockwindow.cpp
+    floating/floatinglabel.cpp \
+    floating/floatingdisplaywindow.cpp \
+    floating/floatingdisplaymanager.cpp \
+    RTC/chimerenderer.cpp \
+    RTC/chime.cpp
 
 HEADERS += \
     app.h \
     awake/awake.h \
     countdown/countdowntimer.h \
+    countdown/countdowndisplay.h \
     countdown/countdownsetupdialog.h \
-    RTC/clockwindow.h \
-    RTC/macos_window.h
+    floating/floatinglabel.h \
+    floating/floatingdisplaywindow.h \
+    floating/floatingdisplaymanager.h \
+    RTC/macos_window.h \
+    RTC/chimerenderer.h \
+    RTC/chime.h
 
 # Deployment rules
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
-
-DISTFILES +=

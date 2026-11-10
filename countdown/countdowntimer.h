@@ -1,12 +1,10 @@
 #ifndef COUNTDOWNTIMER_H
 #define COUNTDOWNTIMER_H
+#include <QObject>
+#include <QString>
+#include <QTimer>
 
-#include <QWidget>
-
-class QLabel;
-class QTimer;
-
-class CountdownTimer : public QWidget {
+class CountdownTimer : public QObject {
     Q_OBJECT
 
 public:
@@ -18,10 +16,13 @@ public:
     };
     Q_ENUM(State)
 
-    explicit CountdownTimer(QWidget *parent = nullptr);
+    explicit CountdownTimer(QObject *parent = nullptr);
 
     State state() const { return currentState; }
     bool isDisplayed() const { return currentState != State::Idle; }
+    bool isDisplayBright() const { return displayIsBright; }
+    const QString &timeText() const { return formattedTime; }
+    const QString &labelText() const { return countdownLabel; }
 
 public slots:
     void startCountdown(qint64 durationSeconds, const QString &label);
@@ -33,6 +34,8 @@ public slots:
 signals:
     void stateChanged(CountdownTimer::State state);
     void displayVisibilityChanged(bool visible);
+    void displayChanged(const QString &timeText, const QString &labelText);
+    void displayBrightnessChanged(bool bright);
 
 private slots:
     void updateRemainingTime();
@@ -42,16 +45,17 @@ private:
     void finishCountdown();
     void setState(State state);
     void updateDisplay();
-    void applyDisplayStyle(bool bright);
+    void setDisplayBrightness(bool bright);
 
     State currentState = State::Idle;
-    QLabel *displayLabel = nullptr;
-    QTimer *updateTimer = nullptr;
-    QTimer *flashTimer = nullptr;
-    QString labelText;
+    QTimer updateTimer;
+    QTimer flashTimer;
+    QString formattedTime;
+    QString countdownLabel;
+    QString displayedLabel;
     qint64 deadlineMs = 0;
     qint64 remainingMs = 0;
-    bool flashIsBright = true;
+    bool displayIsBright = true;
 };
 
 #endif

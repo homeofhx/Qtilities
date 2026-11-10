@@ -6,7 +6,7 @@ As for now, it contains:
 
 - **Awake:** prevents the computer from sleeping.
 
-- **RTC:** Displays local/UTC time near the top of the screen.
+- **RTC:** Displays local/UTC time near the top of the screen, with optional Westminster chimes.
 
 - **Countdown Timer:** Displays a labeled countdown timer.
 
@@ -19,3 +19,13 @@ As for now, it contains:
 **Compiler (Kit):** GCC/MinGW/Clang
 
 **License:** [GNU General Public License v3.0](LICENSE)
+
+## Tests
+
+The core countdown and chime-rendering tests use Qt Test:
+
+```sh
+qmake tests/core_tests.pro
+make
+./core_tests
+```
